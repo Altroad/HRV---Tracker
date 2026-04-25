@@ -1,2 +1,2 @@
-# HRV---Tracker
+# HRV-Tracker
 Tracks overnight HRV values
