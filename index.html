@@ -167,7 +167,7 @@
     <div class="chart-title">HRV Trend</div>
     <div class="chart-legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>HRV</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,107,53,0.7)"></div>Baseline</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.85)"></div>Baseline</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div><div class="legend-dot" style="background:var(--red);margin-left:2px"></div>7D Avg</div>
     </div>
   </div>
@@ -428,7 +428,7 @@ function renderChart() {
     plugins: [buildPointsPlugin(values, pr, canvas)],
     data: { labels, datasets: [
       { data: values, borderColor: COLORS.accent, borderWidth: 3, pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.3 },
-      { data: baselineArr, borderColor: 'rgba(255,107,53,1)', borderWidth: 2, borderDash: [5,4], pointRadius: 0, fill: false },
+      { data: baselineArr, borderColor: 'rgba(255,255,255,0.85)', borderWidth: 4, borderDash: [5,4], pointRadius: 0, fill: false },
       { data: rollingAvg, borderWidth: 4, borderDash: [6,3], pointRadius: 0, fill: false, tension: 0.4, spanGaps: true, segment: { borderColor: ctx => rollingAvg[ctx.p1DataIndex] >= BASELINE ? COLORS.green : COLORS.red } }
     ]},
     options: {
