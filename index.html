@@ -132,7 +132,7 @@
 
 <div class="card today-card">
   <div class="metric">
-    <div class="metric-label">Latest HRV</div>
+    <div class="metric-label">Latest</div>
     <div class="metric-value" id="latestHRV" style="color:var(--accent)">—</div>
     <div class="metric-unit">ms</div>
     <div class="metric-delta" id="hrvDelta">—</div>
@@ -525,6 +525,7 @@ function updateMetrics() {
   const last3 = sorted.slice(-3);
   const avg3 = Math.round(last3.reduce((a,b) => a + b.hrv, 0) / last3.length);
   $('avg3d').textContent = avg3;
+  $('avg3d').style.color = colorForHRV(avg3);
   const ad3 = avg3 - BASELINE;
   const ael3 = $('avg3dDelta');
   ael3.textContent = (ad3 >= 0 ? '+' : '') + ad3 + 'ms vs baseline';
@@ -534,6 +535,7 @@ function updateMetrics() {
   const last7 = sorted.slice(-7);
   const avg = Math.round(last7.reduce((a,b) => a + b.hrv, 0) / last7.length);
   $('avg7d').textContent = avg;
+  $('avg7d').style.color = colorForHRV(avg);
   const ad = avg - BASELINE;
   const ael = $('avg7dDelta');
   ael.textContent = (ad >= 0 ? '+' : '') + ad + 'ms vs baseline';
