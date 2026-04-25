@@ -84,7 +84,7 @@
   /* History */
   .history-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:12px; }
   .history-row:last-child { border-bottom:none; }
-  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); width:80px; flex-shrink:0; }
+  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); width:100px; flex-shrink:0; }
   .history-hrv { font-family:var(--font-display); font-size:24px; letter-spacing:1px; flex:1; }
   .history-bar { flex:2; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
   .history-bar-fill { height:100%; border-radius:2px; }
@@ -475,7 +475,7 @@ function renderHistory() {
     const bw = Math.min(100, (r.hrv / 160) * 100);
     const color = colorForHRV(r.hrv);
     return `<div class="history-row">
-      <div class="history-date">${fmtDate(new Date(r.date))}</div>
+      <div class="history-date">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
       <div class="history-hrv" style="color:${color}">${r.hrv}</div>
       <div class="history-bar"><div class="history-bar-fill" style="width:${bw}%;background:${color}"></div></div>
       <div class="history-delta" style="color:${dColor}">${dStr}</div>
