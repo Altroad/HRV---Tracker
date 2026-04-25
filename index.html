@@ -747,7 +747,7 @@ async function loadFromGitHub() {
 }
 
 async function saveToGitHub() {
-  if (!getGHToken()) return;
+  if (!getGHToken()) return false;
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(readings, null, 2))));
   const body = { message: 'Update HRV readings', content };
   if (ghFileSha) body.sha = ghFileSha;
@@ -755,8 +755,12 @@ async function saveToGitHub() {
   if (res && res.ok) {
     const data = await res.json();
     ghFileSha = data.content.sha;
+    showToast('Saved to GitHub ✓');
+    return true;
   } else {
-    showToast('GitHub sync failed — check your token');
+    const status = res ? `HTTP ${res.status}` : 'network error';
+    showToast(`GitHub save failed (${status}) — tap ⟳ to check token`);
+    return false;
   }
 }
 
@@ -840,7 +844,10 @@ async function init() {
   updateSyncStatus();
   if (getGHToken()) {
     const loaded = await loadFromGitHub();
-    if (!loaded) await saveToGitHub();
+    if (!loaded) {
+      const saved = await saveToGitHub();
+      if (!saved) showToast('Could not reach GitHub — check your token');
+    }
   } else {
     load();
   }
