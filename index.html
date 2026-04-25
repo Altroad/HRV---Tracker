@@ -294,8 +294,11 @@ function rollingAverage(values, window = 7) {
 // ---------- Y-axis (drawn once on init) ----------
 function drawYAxis() {
   const c = $('yAxis');
-  c.width = 28; c.height = CHART.height;
+  const dpr = window.devicePixelRatio || 1;
+  c.width = 28 * dpr; c.height = CHART.height * dpr;
+  c.style.width = '28px'; c.style.height = CHART.height + 'px';
   const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
   ctx.fillStyle = COLORS.surface;
   ctx.fillRect(0, 0, 28, CHART.height);
   const padTop = 10, padBottom = 32, dH = CHART.height - padTop - padBottom;
