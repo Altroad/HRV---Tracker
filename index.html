@@ -341,16 +341,13 @@ function drawYAxis() {
 // ---------- Chart ----------
 function sizeChartCanvas(n) {
   const visibleW = $('chartScroll').clientWidth || 280;
-  const ptW = Math.max(4, Math.floor(visibleW / chartRange));
-  const totalW = Math.max(visibleW, n * ptW);
-  currentPtW = totalW / n;
+  currentPtW = visibleW / Math.max(1, n);
   const dpr = window.devicePixelRatio || 1;
-
-  $('chartInner').style.width = totalW + 'px';
+  $('chartInner').style.width = visibleW + 'px';
   const canvas = $('hrvChart');
-  canvas.width = totalW * dpr;
+  canvas.width = visibleW * dpr;
   canvas.height = CHART.height * dpr;
-  canvas.style.cssText = `width:${totalW}px;height:${CHART.height}px;display:block;`;
+  canvas.style.cssText = `width:${visibleW}px;height:${CHART.height}px;display:block;`;
   return canvas;
 }
 
@@ -435,15 +432,22 @@ function scrollChartToEnd(n) {
 }
 
 function renderChart() {
-  const sorted = sortByDate(getAveragedByDate());
+  const allSorted = sortByDate(getAveragedByDate());
+  if (!allSorted.length) return;
+
+  // Compute rolling avg on full dataset so edge values are accurate
+  const allValues = allSorted.map(r => r.hrv);
+  const allRolling = rollingAverage(allValues);
+
+  // Slice to the last chartRange points for display
+  const sorted = allSorted.slice(-chartRange);
   const n = sorted.length;
-  if (!n) return;
+  const values = allValues.slice(-chartRange);
+  const rollingAvg = allRolling.slice(-chartRange);
+  const baselineArr = sorted.map(() => BASELINE);
 
   const canvas = sizeChartCanvas(n);
   const labels = sorted.map(r => fmtDate(new Date(r.date)));
-  const values = sorted.map(r => r.hrv);
-  const baselineArr = sorted.map(() => BASELINE);
-  const rollingAvg = rollingAverage(values);
   const pr = currentPtW >= 30 ? 20 : currentPtW >= 15 ? 14 : 10;
 
   if (mainChart) { mainChart.destroy(); mainChart = null; }
@@ -468,7 +472,6 @@ function renderChart() {
   });
 
   attachChartTapHandler(canvas);
-  requestAnimationFrame(() => scrollChartToEnd(n));
 }
 
 // ---------- History list ----------
