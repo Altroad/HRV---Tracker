@@ -341,13 +341,20 @@ function drawYAxis() {
 // ---------- Chart ----------
 function sizeChartCanvas(n) {
   const visibleW = $('chartScroll').clientWidth || 280;
-  currentPtW = visibleW / Math.max(1, n);
+  let totalW;
+  if (chartRange <= 14) {
+    currentPtW = Math.floor(visibleW / chartRange);
+    totalW = n * currentPtW;
+  } else {
+    currentPtW = visibleW / Math.max(1, n);
+    totalW = visibleW;
+  }
   const dpr = window.devicePixelRatio || 1;
-  $('chartInner').style.width = visibleW + 'px';
+  $('chartInner').style.width = totalW + 'px';
   const canvas = $('hrvChart');
-  canvas.width = visibleW * dpr;
+  canvas.width = totalW * dpr;
   canvas.height = CHART.height * dpr;
-  canvas.style.cssText = `width:${visibleW}px;height:${CHART.height}px;display:block;`;
+  canvas.style.cssText = `width:${totalW}px;height:${CHART.height}px;display:block;`;
   return canvas;
 }
 
@@ -435,15 +442,14 @@ function renderChart() {
   const allSorted = sortByDate(getAveragedByDate());
   if (!allSorted.length) return;
 
-  // Compute rolling avg on full dataset so edge values are accurate
   const allValues = allSorted.map(r => r.hrv);
   const allRolling = rollingAverage(allValues);
 
-  // Slice to the last chartRange points for display
-  const sorted = allSorted.slice(-chartRange);
+  // 14D: show all data on scrollable canvas; 60D: slice to last chartRange
+  const sorted = chartRange <= 14 ? allSorted : allSorted.slice(-chartRange);
   const n = sorted.length;
-  const values = allValues.slice(-chartRange);
-  const rollingAvg = allRolling.slice(-chartRange);
+  const values = chartRange <= 14 ? allValues : allValues.slice(-chartRange);
+  const rollingAvg = chartRange <= 14 ? allRolling : allRolling.slice(-chartRange);
   const baselineArr = sorted.map(() => BASELINE);
 
   const canvas = sizeChartCanvas(n);
@@ -472,6 +478,7 @@ function renderChart() {
   });
 
   attachChartTapHandler(canvas);
+  if (chartRange <= 14) requestAnimationFrame(() => scrollChartToEnd(n));
 }
 
 // ---------- History list ----------
