@@ -341,7 +341,7 @@ function drawYAxis() {
 // ---------- Chart ----------
 function sizeChartCanvas(n) {
   const visibleW = $('chartScroll').clientWidth || 280;
-  currentPtW = Math.floor(visibleW / Math.min(chartRange, n));
+  currentPtW = Math.max(4, Math.floor(visibleW / chartRange));
   const totalW = n * currentPtW;
   const dpr = window.devicePixelRatio || 1;
 
