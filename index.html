@@ -785,7 +785,7 @@ function doImport(text, overlay) {
 function showCalcModal() {
   const overlay = openModal(`
     <div class="modal-title">Calculate from Health Export</div>
-    <div class="modal-desc">Paste one day's export for Method B (1:30–3:00am), or paste two consecutive days' exports for Method A (11:30pm–1:00am). Method is detected automatically.</div>
+    <div class="modal-desc">Paste one day's export for Mid Sleep Capture (1:30–3:00am), or paste two consecutive days' exports for Early Sleep Capture (11:30pm–1:00am). Method is detected automatically.</div>
     <textarea placeholder="Paste JSON here..."></textarea>
     <div class="modal-actions">
       <button class="modal-btn cancel" data-cancel>CANCEL</button>
@@ -839,7 +839,7 @@ function runCalc(text, overlay) {
         return mins >= 90 && mins <= 180;
       });
       if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window — need at least 3`);
-      methodLabel = 'Method B · 1:30am–3:00am';
+      methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
     } else {
       // Method A: 11:30pm–1:00am window spanning midnight
       const readings = [...extractHRVReadings(jsons[0]), ...extractHRVReadings(jsons[1])];
@@ -849,7 +849,7 @@ function runCalc(text, overlay) {
         return mins >= 1410 || mins < 60; // 23:30–23:59 or 00:00–00:59
       });
       if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 11:30pm–1am window — need at least 3`);
-      methodLabel = 'Method A · 11:30pm–1:00am';
+      methodLabel = 'Early Sleep Capture · 11:30pm–1:00am';
     }
 
     // Sort by timestamp for display
