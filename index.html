@@ -785,7 +785,7 @@ function doImport(text, overlay) {
 function showCalcModal() {
   const overlay = openModal(`
     <div class="modal-title">Calculate from Health Export</div>
-    <div class="modal-desc">Paste your Health Auto Export JSON. Readings between 1:30am and 3:00am will be extracted, trimmed (drop highest + lowest), and averaged.</div>
+    <div class="modal-desc">Paste one day's export for Method B (1:30–3:00am), or paste two consecutive days' exports for Method A (11:30pm–1:00am). Method is detected automatically.</div>
     <textarea placeholder="Paste JSON here..."></textarea>
     <div class="modal-actions">
       <button class="modal-btn cancel" data-cancel>CANCEL</button>
@@ -797,51 +797,85 @@ function showCalcModal() {
   overlay.querySelector('[data-calc]').addEventListener('click', () => runCalc(ta.value, overlay));
 }
 
+function parseJsonBlocks(text) {
+  try { return [JSON.parse(text)]; } catch(e) {}
+  // Find two top-level JSON objects by brace depth
+  let depth = 0, splitAt = -1;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') { depth--; if (depth === 0) { splitAt = i + 1; break; } }
+  }
+  if (splitAt > 0) {
+    try { return [JSON.parse(text.slice(0, splitAt)), JSON.parse(text.slice(splitAt).trim())]; } catch(e) {}
+  }
+  throw new Error('Could not parse export data');
+}
+
+function extractHRVReadings(json) {
+  const metrics = json?.data?.metrics;
+  if (!Array.isArray(metrics)) throw new Error('Invalid format');
+  const metric = metrics.find(m => m.name === 'heart_rate_variability');
+  if (!metric) throw new Error('No HRV data found');
+  return metric.data;
+}
+
+function readingLocalHM(r) {
+  const raw = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1');
+  const d = new Date(raw);
+  return { h: d.getHours(), m: d.getMinutes(), ts: d.getTime() };
+}
+
 function runCalc(text, overlay) {
   try {
-    const json = JSON.parse(text.trim());
-    const metrics = json?.data?.metrics;
-    if (!Array.isArray(metrics)) throw new Error('Invalid format');
+    const jsons = parseJsonBlocks(text.trim());
+    let filtered, methodLabel;
 
-    const metric = metrics.find(m => m.name === 'heart_rate_variability');
-    if (!metric) throw new Error('No HRV data found');
+    if (jsons.length === 1) {
+      // Method B: 1:30am–3:00am window
+      const readings = extractHRVReadings(jsons[0]);
+      filtered = readings.filter(r => {
+        const { h, m } = readingLocalHM(r);
+        const mins = h * 60 + m;
+        return mins >= 90 && mins <= 180;
+      });
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window — need at least 3`);
+      methodLabel = 'Method B · 1:30am–3:00am';
+    } else {
+      // Method A: 11:30pm–1:00am window spanning midnight
+      const readings = [...extractHRVReadings(jsons[0]), ...extractHRVReadings(jsons[1])];
+      filtered = readings.filter(r => {
+        const { h, m } = readingLocalHM(r);
+        const mins = h * 60 + m;
+        return mins >= 1410 || mins < 60; // 23:30–23:59 or 00:00–00:59
+      });
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 11:30pm–1am window — need at least 3`);
+      methodLabel = 'Method A · 11:30pm–1:00am';
+    }
 
-    // Filter to 1:30am–3:00am window (local time)
-    const filtered = metric.data.filter(r => {
-      const raw1 = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1'); const d = new Date(raw1);
-      const h = d.getHours(), m = d.getMinutes();
-      const mins = h * 60 + m;
-      return mins >= 90 && mins <= 180; // 1:30am = 90min, 3:00am = 180min
-    });
-
-    if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window — need at least 3`);
+    // Sort by timestamp for display
+    filtered.sort((a, b) => readingLocalHM(a).ts - readingLocalHM(b).ts);
 
     const values = filtered.map(r => r.qty).sort((a, b) => a - b);
-    const trimmed = values.slice(1, -1); // drop lowest and highest
+    const trimmed = values.slice(1, -1);
     const avg = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
     const min = values[0], max = values[values.length - 1];
 
     overlay.remove();
 
-    // Show result panel
     const panel = $('calcResult');
-    const color = colorForHRV(avg);
     $('calcValue').textContent = avg;
-    $('calcValue').style.color = color;
-    $('calcLabel').textContent = `trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
+    $('calcValue').style.color = colorForHRV(avg);
+    $('calcLabel').textContent = `${methodLabel} · trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
 
-    // Render chips — sorted by time
     const chips = filtered.map(r => {
       const qty = Math.round(r.qty);
       const isDropped = r.qty === values[0] || r.qty === values[values.length - 1];
       const cls = isDropped ? 'calc-chip dropped' : 'calc-chip used';
-      const raw2 = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1'); const d = new Date(raw2);
-      const t = `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const { h, m } = readingLocalHM(r);
+      const t = `${h}:${String(m).padStart(2,'0')}`;
       return `<div class="${cls}">${t} · ${qty}</div>`;
     });
     $('calcReadings').innerHTML = chips.join('');
-
-    // Pre-fill HRV value
     $('inputHRV').value = avg;
     panel.classList.add('show');
 
