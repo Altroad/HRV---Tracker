@@ -621,10 +621,11 @@ function setStatus(hrv) {
 function updateMetrics() {
   if (!readings.length) return;
   const sorted = sortByDate(readings);
-  const latest = sorted.at(-1);
-  const prev = sorted.length > 1 ? sorted.at(-2) : null;
+  const averaged = sortByDate(getAveragedByDate());
+  const latest = averaged.at(-1);
+  const prev = averaged.length > 1 ? averaged.at(-2) : null;
 
-  // Latest
+  // Latest (average of all readings on the most recent date)
   $('latestHRV').textContent = latest.hrv;
   $('latestHRV').style.color = colorForHRV(latest.hrv);
   if (prev) {
@@ -669,6 +670,7 @@ function updateMetrics() {
 }
 
 // ---------- CRUD ----------
+
 function addReading() {
   const date = $('inputDate').value;
   const hrv = parseInt($('inputHRV').value);
