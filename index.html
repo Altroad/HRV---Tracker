@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HRV Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -18,7 +18,9 @@
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:var(--font-body); min-height:100vh; padding:24px 20px 60px; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-body); min-height:100vh; padding:24px 20px 60px; overscroll-behavior-y:contain; }
+  .pull-indicator { text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--accent); letter-spacing:2px; height:0; overflow:hidden; opacity:0; transition:height 0.1s, opacity 0.1s; }
+  .pull-indicator.visible { height:28px; opacity:1; line-height:28px; }
 
   /* Header */
   .header-top { text-align:center; margin-bottom:24px; position:relative; }
@@ -33,7 +35,8 @@
 
   /* Cards */
   .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
-  .today-card { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .today-card { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .today-card .metric-value { font-size:34px; }
 
   .metric { text-align:center; }
   .metric-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); margin-bottom:6px; }
@@ -54,12 +57,15 @@
   .zone-range { font-family:var(--font-display); font-size:16px; }
 
   /* Chart */
-  .chart-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .chart-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
   .chart-title, .input-label { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); }
+  .chart-range-toggle { display:flex; gap:4px; }
+  .range-btn { background:none; border:1px solid var(--border); color:var(--muted); font-family:var(--font-mono); font-size:10px; letter-spacing:1px; padding:3px 8px; border-radius:4px; cursor:pointer; }
+  .range-btn.active { border-color:var(--accent); color:var(--accent); }
   .input-label { font-size:10px; margin-bottom:14px; }
-  .chart-legend { display:flex; gap:12px; }
-  .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--muted); font-family:var(--font-mono); }
-  .legend-dot { width:8px; height:8px; border-radius:50%; }
+  .chart-legend { display:flex; gap:8px; align-items:center; }
+  .legend-item { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted); font-family:var(--font-mono); }
+  .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; display:block; }
   .chart-outer { display:flex; }
   .y-axis-wrap { flex-shrink:0; width:28px; height:260px; background:var(--surface); }
   .chart-scroll-area { flex:1; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; height:260px; }
@@ -81,7 +87,7 @@
   /* History */
   .history-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:12px; }
   .history-row:last-child { border-bottom:none; }
-  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); width:80px; flex-shrink:0; }
+  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); width:100px; flex-shrink:0; }
   .history-hrv { font-family:var(--font-display); font-size:24px; letter-spacing:1px; flex:1; }
   .history-bar { flex:2; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
   .history-bar-fill { height:100%; border-radius:2px; }
@@ -89,6 +95,12 @@
   .delete-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px; opacity:0.5; }
   .delete-btn.confirming { color:var(--red); opacity:1; font-size:10px; font-family:monospace; letter-spacing:1px; border:1px solid rgba(244,67,54,0.4); border-radius:4px; padding:3px 7px; }
   .empty-state { text-align:center; padding:30px; color:var(--muted); font-size:13px; font-family:var(--font-mono); }
+  .month-divider { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--accent); font-family:var(--font-mono); padding:14px 0 6px; margin-top:4px; }
+  .week-header { display:flex; align-items:center; padding:9px 0; cursor:pointer; border-bottom:1px solid var(--border); -webkit-user-select:none; user-select:none; }
+  .week-label { font-size:11px; color:var(--text); font-family:var(--font-mono); flex:1; }
+  .week-count { font-size:10px; color:var(--muted); font-family:var(--font-mono); margin-right:8px; }
+  .week-chevron { font-size:9px; color:var(--muted); }
+  .week-content.collapsed { display:none; }
 
   /* Calculator */
   .calc-result { margin-top:12px; padding:12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; display:none; }
@@ -118,6 +130,8 @@
 </head>
 <body>
 
+<div class="pull-indicator" id="pullIndicator">↓ RELEASE TO REFRESH</div>
+
 <div class="header-top">
   <h1>HRV Tracker</h1>
   <div class="baseline-badge" id="baselineBadge">Baseline: 88ms</div>
@@ -127,10 +141,16 @@
 
 <div class="card today-card">
   <div class="metric">
-    <div class="metric-label">Latest HRV</div>
+    <div class="metric-label">Latest</div>
     <div class="metric-value" id="latestHRV" style="color:var(--accent)">—</div>
     <div class="metric-unit">ms</div>
     <div class="metric-delta" id="hrvDelta">—</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">3D Avg</div>
+    <div class="metric-value" id="avg3d" style="color:var(--orange)">—</div>
+    <div class="metric-unit">ms</div>
+    <div class="metric-delta" id="avg3dDelta">vs baseline</div>
   </div>
   <div class="metric">
     <div class="metric-label">7D Avg</div>
@@ -161,10 +181,14 @@
 <div class="card">
   <div class="chart-header">
     <div class="chart-title">HRV Trend</div>
+    <div class="chart-range-toggle">
+      <button class="range-btn active" id="btn14d" onclick="setChartRange(14)">14D</button>
+      <button class="range-btn" id="btn60d" onclick="setChartRange(60)">60D</button>
+    </div>
     <div class="chart-legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>HRV</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,107,53,0.7)"></div>Baseline</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.4)"></div>7D Avg</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.85)"></div>Baseline</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div><div class="legend-dot" style="background:var(--red);margin-left:2px"></div>7D Avg</div>
     </div>
   </div>
   <div class="chart-outer">
@@ -178,7 +202,7 @@
 </div>
 
 <div class="card">
-  <div class="input-label">Log Core Sleep HRV (1:30–3am reading)</div>
+  <div class="input-label">Log Sleep HRV, Early, Mid, or Combined</div>
   <div class="input-row">
     <input type="date" id="inputDate">
     <input type="number" id="inputHRV" placeholder="HRV" min="20" max="220">
@@ -191,7 +215,6 @@
     <div class="calc-result-value" id="calcValue">—</div>
     <div class="calc-result-label" id="calcLabel">trimmed mean · drop highest + lowest</div>
     <div class="calc-readings" id="calcReadings"></div>
-    <button class="btn-primary" id="calcUseBtn" style="width:100%">USE THIS VALUE</button>
   </div>
   <div class="backup-row">
     <button class="btn-secondary" id="exportBtn">Export Backup</button>
@@ -211,7 +234,7 @@
 const STORAGE_KEY = 'hrv_readings_v2';
 const BACKUP_KEY  = 'hrv_readings_backup';
 const LEGACY_KEYS = ['hrv_readings'];
-const CHART = { minV: 20, maxV: 160, height: 260, range: 14 };
+const CHART = { minV: 20, maxV: 170, height: 260, range: 14 };
 const COLORS = { accent:'#00e5ff', green:'#4caf50', orange:'#ff9800', red:'#f44336', muted:'#4a6070', surface:'#0e1419' };
 const GH_OWNER = 'Altroad';
 const GH_REPO  = 'HRV-Tracker';
@@ -225,6 +248,7 @@ let mainChart = null;
 let currentPtW = 0;
 let tappedIdx = null;
 let nextId = 1;
+let chartRange = 14;
 
 // ---------- Helpers ----------
 const $ = id => document.getElementById(id);
@@ -258,13 +282,15 @@ function load() {
   } catch { readings = []; }
 }
 
+let saveTimer = null;
 function save() {
   try {
     const data = JSON.stringify(readings);
     localStorage.setItem(STORAGE_KEY, data);
     localStorage.setItem(BACKUP_KEY, data);
   } catch {}
-  saveToGitHub();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveToGitHub(), 800);
 }
 
 // ---------- Data shaping ----------
@@ -273,7 +299,7 @@ function getAveragedByDate() {
   for (const r of readings) (groups[r.date] ||= []).push(r.hrv);
   return Object.entries(groups).map(([date, hrvs]) => ({
     date,
-    hrv: Math.round(hrvs.reduce((a,b) => a+b, 0) / hrvs.length),
+    hrv: parseFloat((hrvs.reduce((a,b) => a+b, 0) / hrvs.length).toFixed(2)),
     count: hrvs.length
   }));
 }
@@ -281,15 +307,18 @@ function getAveragedByDate() {
 function rollingAverage(values, window = 7) {
   return values.map((_, i) => {
     const slice = values.slice(Math.max(0, i - window + 1), i + 1);
-    return Math.round(slice.reduce((a,b) => a+b, 0) / slice.length);
+    return parseFloat((slice.reduce((a,b) => a+b, 0) / slice.length).toFixed(2));
   });
 }
 
 // ---------- Y-axis (drawn once on init) ----------
 function drawYAxis() {
   const c = $('yAxis');
-  c.width = 28; c.height = CHART.height;
+  const dpr = window.devicePixelRatio || 1;
+  c.width = 28 * dpr; c.height = CHART.height * dpr;
+  c.style.width = '28px'; c.style.height = CHART.height + 'px';
   const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
   ctx.fillStyle = COLORS.surface;
   ctx.fillRect(0, 0, 28, CHART.height);
   const padTop = 10, padBottom = 32, dH = CHART.height - padTop - padBottom;
@@ -311,10 +340,15 @@ function drawYAxis() {
 // ---------- Chart ----------
 function sizeChartCanvas(n) {
   const visibleW = $('chartScroll').clientWidth || 280;
-  currentPtW = Math.floor(visibleW / Math.min(CHART.range, n));
-  const totalW = n * currentPtW;
+  let totalW;
+  if (chartRange <= 14) {
+    currentPtW = Math.floor(visibleW / chartRange);
+    totalW = n * currentPtW;
+  } else {
+    currentPtW = visibleW / Math.max(1, n);
+    totalW = visibleW;
+  }
   const dpr = window.devicePixelRatio || 1;
-
   $('chartInner').style.width = totalW + 'px';
   const canvas = $('hrvChart');
   canvas.width = totalW * dpr;
@@ -400,69 +434,167 @@ function attachChartTapHandler(canvas) {
 }
 
 function scrollChartToEnd(n) {
-  $('chartScroll').scrollLeft = Math.max(0, (n - CHART.range) * currentPtW);
+  $('chartScroll').scrollLeft = Math.max(0, (n - chartRange) * currentPtW);
 }
 
 function renderChart() {
-  const sorted = sortByDate(getAveragedByDate());
+  const allSorted = sortByDate(getAveragedByDate());
+  if (!allSorted.length) return;
+
+  const allValues = allSorted.map(r => r.hrv);
+  const allRolling = rollingAverage(allValues);
+
+  // 14D: show all data on scrollable canvas; 60D: slice to last chartRange
+  const sorted = chartRange <= 14 ? allSorted : allSorted.slice(-chartRange);
   const n = sorted.length;
-  if (!n) return;
+  const values = chartRange <= 14 ? allValues : allValues.slice(-chartRange);
+  const rollingAvg = chartRange <= 14 ? allRolling : allRolling.slice(-chartRange);
+  const baselineArr = sorted.map(() => BASELINE);
+
+  if (mainChart) { mainChart.destroy(); mainChart = null; }
 
   const canvas = sizeChartCanvas(n);
   const labels = sorted.map(r => fmtDate(new Date(r.date)));
-  const values = sorted.map(r => r.hrv);
-  const baselineArr = sorted.map(() => BASELINE);
-  const rollingAvg = rollingAverage(values);
-  const pr = currentPtW >= 30 ? 20 : currentPtW >= 15 ? 14 : 10;
-
-  if (mainChart) { mainChart.destroy(); mainChart = null; }
+  const pr = Math.max(4, Math.min(20, Math.floor(currentPtW / 2)));
 
   mainChart = new Chart(canvas.getContext('2d'), {
     type: 'line',
     plugins: [buildPointsPlugin(values, pr, canvas)],
     data: { labels, datasets: [
-      { data: values, borderColor: COLORS.accent, borderWidth: 3, pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.3 },
-      { data: baselineArr, borderColor: 'rgba(255,107,53,1)', borderWidth: 2, borderDash: [5,4], pointRadius: 0, fill: false },
-      { data: rollingAvg, borderColor: 'rgba(255,255,255,0.8)', borderWidth: 2.5, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0.4, spanGaps: true }
+      { data: values, borderColor: chartRange <= 14 ? COLORS.accent : 'rgba(160,180,192,0.35)', borderWidth: chartRange <= 14 ? 3 : 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.3 },
+      { data: baselineArr, borderColor: 'rgba(255,255,255,0.85)', borderWidth: 4, borderDash: [5,4], pointRadius: 0, fill: false },
+      { data: rollingAvg, borderWidth: 4, borderDash: [6,3], pointRadius: 0, fill: false, tension: 0.4, spanGaps: true, segment: { borderColor: ctx => rollingAvg[ctx.p1DataIndex] >= BASELINE ? COLORS.green : COLORS.red } }
     ]},
     options: {
       responsive: false, animation: false,
       devicePixelRatio: window.devicePixelRatio || 1,
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
-        x: { grid: { color: 'rgba(30,42,51,0.8)' }, ticks: { color: '#a0b4c0', font: { family: 'DM Mono', size: 20, weight: '500' } } },
+        x: { grid: { color: 'rgba(30,42,51,0.8)' }, ticks: chartRange <= 14
+          ? { color: '#a0b4c0', font: { family: 'DM Mono', size: 20, weight: '500' } }
+          : { color: '#a0b4c0', font: { family: 'DM Mono', size: 20, weight: '500' },
+              autoSkip: false,
+              callback: (val, idx) => {
+                const d = new Date(sorted[idx].date);
+                const prev = idx > 0 ? new Date(sorted[idx-1].date) : null;
+                if (idx === 0 || (prev && prev.getMonth() !== d.getMonth()))
+                  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+                return '';
+              }
+            }
+        },
         y: { display: false, min: CHART.minV, max: CHART.maxV }
       }
     }
   });
 
   attachChartTapHandler(canvas);
-  requestAnimationFrame(() => scrollChartToEnd(n));
+  if (chartRange <= 14) requestAnimationFrame(() => scrollChartToEnd(n));
 }
 
 // ---------- History list ----------
+const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function getWeekMonday(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d;
+}
+
+function fmtWeekRange(monday) {
+  const sun = new Date(monday);
+  sun.setDate(sun.getDate() + 6);
+  const m1 = MONTHS_SHORT[monday.getMonth()], m2 = MONTHS_SHORT[sun.getMonth()];
+  return m1 === m2
+    ? `${monday.getDate()} – ${sun.getDate()} ${m1}`
+    : `${monday.getDate()} ${m1} – ${sun.getDate()} ${m2}`;
+}
+
+function toggleWeek(key) {
+  const content = document.getElementById('week-' + key);
+  const chev = document.getElementById('chev-' + key);
+  const collapsed = content.classList.toggle('collapsed');
+  chev.textContent = collapsed ? '▶' : '▼';
+}
+
 function renderHistory() {
-  const sorted = sortByDate(readings, -1);
   const el = $('historyList');
-  if (!sorted.length) {
-    el.innerHTML = '<div class="empty-state">No readings yet</div>';
-    return;
-  }
-  el.innerHTML = sorted.map((r, i) => {
+  if (!readings.length) { el.innerHTML = '<div class="empty-state">No readings yet</div>'; return; }
+
+  const sorted = [...readings].sort((a, b) => {
+    const d = new Date(b.date) - new Date(a.date);
+    return d !== 0 ? d : b.id - a.id;
+  });
+
+  // Pre-compute deltas against chronological neighbour
+  const deltaMap = new Map();
+  for (let i = 0; i < sorted.length; i++) {
     const prev = sorted[i + 1];
-    const delta = prev ? r.hrv - prev.hrv : null;
-    const dStr = delta === null ? '—' : (delta >= 0 ? `+${delta}` : `${delta}`);
-    const dColor = delta === null ? COLORS.muted : delta >= 0 ? COLORS.green : COLORS.red;
-    const bw = Math.min(100, (r.hrv / 160) * 100);
-    const color = colorForHRV(r.hrv);
-    return `<div class="history-row">
-      <div class="history-date">${fmtDate(new Date(r.date))}</div>
-      <div class="history-hrv" style="color:${color}">${r.hrv}</div>
-      <div class="history-bar"><div class="history-bar-fill" style="width:${bw}%;background:${color}"></div></div>
-      <div class="history-delta" style="color:${dColor}">${dStr}</div>
-      <button class="delete-btn" data-id="${r.id}">✕</button>
-    </div>`;
-  }).join('');
+    deltaMap.set(sorted[i].id, prev ? sorted[i].hrv - prev.hrv : null);
+  }
+
+  // Group by week
+  const weekMap = new Map();
+  for (const r of sorted) {
+    const mon = getWeekMonday(r.date);
+    const key = mon.toISOString().split('T')[0];
+    if (!weekMap.has(key)) weekMap.set(key, { monday: mon, entries: [] });
+    weekMap.get(key).entries.push(r);
+  }
+  const weeks = [...weekMap.entries()].sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+  // Auto-expand enough weeks from the top to always show at least 7 recent readings
+  let autoExpandCount = 0;
+  const autoExpanded = new Set();
+  for (const [key, { entries }] of weeks) {
+    if (autoExpandCount >= 7) break;
+    autoExpanded.add(key);
+    autoExpandCount += entries.length;
+  }
+
+  const thisYear = new Date().getFullYear();
+  let lastMonthKey = null;
+  let html = '';
+
+  weeks.forEach(([key, { monday, entries }], wi) => {
+    const monthKey = `${monday.getFullYear()}-${monday.getMonth()}`;
+    if (monthKey !== lastMonthKey) {
+      const yr = monday.getFullYear() !== thisYear ? ` ${monday.getFullYear()}` : '';
+      html += `<div class="month-divider">${MONTHS_LONG[monday.getMonth()]}${yr}</div>`;
+      lastMonthKey = monthKey;
+    }
+
+    const isFirst = autoExpanded.has(key);
+    const chevron = isFirst ? '▼' : '▶';
+    const collapsed = isFirst ? '' : 'collapsed';
+    html += `<div class="week-header" onclick="toggleWeek('${key}')">
+      <span class="week-label">${fmtWeekRange(monday)}</span>
+      <span class="week-count">${entries.length} reading${entries.length !== 1 ? 's' : ''}</span>
+      <span class="week-chevron" id="chev-${key}">${chevron}</span>
+    </div>
+    <div class="week-content ${collapsed}" id="week-${key}">`;
+
+    entries.forEach(r => {
+      const delta = deltaMap.get(r.id);
+      const dStr = delta === null ? '—' : (delta >= 0 ? `▲${delta}` : `▼${Math.abs(delta)}`);
+      const dColor = delta === null ? COLORS.muted : delta >= 0 ? COLORS.green : COLORS.red;
+      const bw = Math.min(100, (r.hrv / 170) * 100);
+      const color = colorForHRV(r.hrv);
+      html += `<div class="history-row">
+        <div class="history-date">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
+        <div class="history-hrv" style="color:${color}">${r.hrv}</div>
+        <div class="history-bar"><div class="history-bar-fill" style="width:${bw}%;background:${color}"></div></div>
+        <div class="history-delta" style="color:${dColor}">${dStr}</div>
+        <button class="delete-btn" data-id="${r.id}">✕</button>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
 }
 
 // ---------- Metrics + Status ----------
@@ -489,26 +621,38 @@ function setStatus(hrv) {
 function updateMetrics() {
   if (!readings.length) return;
   const sorted = sortByDate(readings);
-  const latest = sorted.at(-1);
-  const prev = sorted.length > 1 ? sorted.at(-2) : null;
+  const averaged = sortByDate(getAveragedByDate());
+  const latest = averaged.at(-1);
+  const prev = averaged.length > 1 ? averaged.at(-2) : null;
 
-  // Latest
+  // Latest (average of all readings on the most recent date)
   $('latestHRV').textContent = latest.hrv;
   $('latestHRV').style.color = colorForHRV(latest.hrv);
   if (prev) {
     const d = latest.hrv - prev.hrv;
     const el = $('hrvDelta');
-    el.textContent = (d >= 0 ? '▲' : '▼') + Math.abs(d) + 'ms from prev';
+    el.textContent = (d >= 0 ? '▲' : '▼') + Math.round(Math.abs(d)) + 'ms from prev';
     el.style.color = d >= 0 ? COLORS.green : COLORS.red;
   }
+
+  // 3-day avg
+  const last3 = sorted.slice(-3);
+  const avg3 = Math.round(last3.reduce((a,b) => a + b.hrv, 0) / last3.length);
+  $('avg3d').textContent = avg3;
+  $('avg3d').style.color = colorForHRV(avg3);
+  const ad3 = avg3 - BASELINE;
+  const ael3 = $('avg3dDelta');
+  ael3.textContent = (ad3 >= 0 ? '▲' : '▼') + Math.abs(ad3) + 'ms vs baseline';
+  ael3.style.color = ad3 >= 0 ? COLORS.green : COLORS.red;
 
   // 7-day avg
   const last7 = sorted.slice(-7);
   const avg = Math.round(last7.reduce((a,b) => a + b.hrv, 0) / last7.length);
   $('avg7d').textContent = avg;
+  $('avg7d').style.color = colorForHRV(avg);
   const ad = avg - BASELINE;
   const ael = $('avg7dDelta');
-  ael.textContent = (ad >= 0 ? '+' : '') + ad + 'ms vs baseline';
+  ael.textContent = (ad >= 0 ? '▲' : '▼') + Math.abs(ad) + 'ms vs baseline';
   ael.style.color = ad >= 0 ? COLORS.green : COLORS.red;
 
   // Trend
@@ -526,6 +670,7 @@ function updateMetrics() {
 }
 
 // ---------- CRUD ----------
+
 function addReading() {
   const date = $('inputDate').value;
   const hrv = parseInt($('inputHRV').value);
@@ -642,7 +787,7 @@ function doImport(text, overlay) {
 function showCalcModal() {
   const overlay = openModal(`
     <div class="modal-title">Calculate from Health Export</div>
-    <div class="modal-desc">Paste your Health Auto Export JSON. Readings between 1:30am and 3:00am will be extracted, trimmed (drop highest + lowest), and averaged.</div>
+    <div class="modal-desc">Paste one day's export, two consecutive days', or a full monthly export. For monthly data you'll be prompted to choose the date and method.</div>
     <textarea placeholder="Paste JSON here..."></textarea>
     <div class="modal-actions">
       <button class="modal-btn cancel" data-cancel>CANCEL</button>
@@ -654,57 +799,182 @@ function showCalcModal() {
   overlay.querySelector('[data-calc]').addEventListener('click', () => runCalc(ta.value, overlay));
 }
 
+function parseJsonBlocks(text) {
+  try { return [JSON.parse(text)]; } catch(e) {}
+  // Find two top-level JSON objects by brace depth
+  let depth = 0, splitAt = -1;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') { depth--; if (depth === 0) { splitAt = i + 1; break; } }
+  }
+  if (splitAt > 0) {
+    try { return [JSON.parse(text.slice(0, splitAt)), JSON.parse(text.slice(splitAt).trim())]; } catch(e) {}
+  }
+  throw new Error('Could not parse export data');
+}
+
+function extractHRVReadings(json) {
+  const metrics = json?.data?.metrics;
+  if (!Array.isArray(metrics)) throw new Error('Invalid format');
+  const metric = metrics.find(m => m.name === 'heart_rate_variability');
+  if (!metric) throw new Error('No HRV data found');
+  return metric.data;
+}
+
+function readingLocalHM(r) {
+  const raw = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1');
+  const d = new Date(raw);
+  return { h: d.getHours(), m: d.getMinutes(), ts: d.getTime() };
+}
+
+function readingLocalDate(r) {
+  const raw = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1');
+  const d = new Date(raw);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function runCalc(text, overlay) {
   try {
-    const json = JSON.parse(text.trim());
-    const metrics = json?.data?.metrics;
-    if (!Array.isArray(metrics)) throw new Error('Invalid format');
+    const jsons = parseJsonBlocks(text.trim());
+    let filtered, methodLabel;
 
-    const metric = metrics.find(m => m.name === 'heart_rate_variability');
-    if (!metric) throw new Error('No HRV data found');
+    if (jsons.length === 1) {
+      const allReadings = extractHRVReadings(jsons[0]);
+      const uniqueDates = [...new Set(allReadings.map(r => readingLocalDate(r)))].sort();
 
-    // Filter to 1:30am–3:00am window (local time)
-    const filtered = metric.data.filter(r => {
-      const raw1 = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1'); const d = new Date(raw1);
-      const h = d.getHours(), m = d.getMinutes();
-      const mins = h * 60 + m;
-      return mins >= 90 && mins <= 180; // 1:30am = 90min, 3:00am = 180min
-    });
+      if (uniqueDates.length > 2) {
+        showMonthlyPicker(allReadings, uniqueDates, overlay);
+        return;
+      }
 
-    if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window — need at least 3`);
+      filtered = allReadings.filter(r => {
+        const { h, m } = readingLocalHM(r);
+        const mins = h * 60 + m;
+        return mins >= 90 && mins <= 180;
+      });
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window — need at least 3`);
+      methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
+    } else {
+      const r0 = extractHRVReadings(jsons[0]), r1 = extractHRVReadings(jsons[1]);
+      const domDate = rs => (rs[0]?.date || rs[0]?.start || '').split(' ')[0];
+      const [early, late] = domDate(r0) <= domDate(r1) ? [r0, r1] : [r1, r0];
+      const fromEarly = early.filter(r => { const { h, m } = readingLocalHM(r); return h === 23 && m >= 30; });
+      const fromLate  = late.filter(r  => { const { h, m } = readingLocalHM(r); return h === 0 || (h === 1 && m <= 29); });
+      filtered = [...fromEarly, ...fromLate];
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 11:30pm–1:29am window — need at least 3`);
+      methodLabel = 'Early Sleep Capture · 11:30pm–1:29am';
+    }
 
-    const values = filtered.map(r => r.qty).sort((a, b) => a - b);
-    const trimmed = values.slice(1, -1); // drop lowest and highest
-    const avg = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
-    const min = values[0], max = values[values.length - 1];
-
-    overlay.remove();
-
-    // Show result panel
-    const panel = $('calcResult');
-    const color = colorForHRV(avg);
-    $('calcValue').textContent = avg;
-    $('calcValue').style.color = color;
-    $('calcLabel').textContent = `trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
-
-    // Render chips — sorted by time
-    const chips = filtered.map(r => {
-      const qty = Math.round(r.qty);
-      const isDropped = r.qty === values[0] || r.qty === values[values.length - 1];
-      const cls = isDropped ? 'calc-chip dropped' : 'calc-chip used';
-      const raw2 = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1'); const d = new Date(raw2);
-      const t = `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-      return `<div class="${cls}">${t} · ${qty}</div>`;
-    });
-    $('calcReadings').innerHTML = chips.join('');
-
-    // Pre-fill HRV value
-    $('inputHRV').value = avg;
-    panel.classList.add('show');
-
+    applyCalcResult(filtered, methodLabel, overlay);
   } catch(e) {
     showToast(e.message || 'Invalid export data');
   }
+}
+
+function applyCalcResult(filtered, methodLabel, overlay) {
+  filtered.sort((a, b) => readingLocalHM(a).ts - readingLocalHM(b).ts);
+  const values = filtered.map(r => r.qty).sort((a, b) => a - b);
+  const trimmed = values.slice(1, -1);
+  const avg = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
+  const min = values[0], max = values[values.length - 1];
+  overlay.remove();
+  const panel = $('calcResult');
+  $('calcValue').textContent = avg;
+  $('calcValue').style.color = colorForHRV(avg);
+  $('calcLabel').textContent = `${methodLabel} · trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
+  const chips = filtered.map(r => {
+    const qty = Math.round(r.qty);
+    const isDropped = r.qty === values[0] || r.qty === values[values.length - 1];
+    const cls = isDropped ? 'calc-chip dropped' : 'calc-chip used';
+    const { h, m } = readingLocalHM(r);
+    const t = `${h}:${String(m).padStart(2,'0')}`;
+    return `<div class="${cls}">${t} · ${qty}</div>`;
+  });
+  $('calcReadings').innerHTML = chips.join('');
+  $('inputHRV').value = avg;
+  panel.classList.add('show');
+}
+
+function showMonthlyPicker(allReadings, dates, overlay) {
+  const modal = overlay.querySelector('.modal');
+  const sortedDates = [...dates].sort((a, b) => b.localeCompare(a));
+  const dateOptions = sortedDates.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    const label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `<option value="${d}">${label}</option>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-title">Monthly Export — Choose Night</div>
+    <div class="modal-desc">${dates.length} days detected. Select the night to calculate and choose the capture window.</div>
+    <select id="monthDatePicker" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-mono);font-size:14px;width:100%;outline:none;box-sizing:border-box;">${dateOptions}</select>
+    <div style="display:flex;flex-direction:column;gap:10px;font-family:var(--font-mono);font-size:12px;color:var(--text);padding:2px 0;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="radio" name="monthMethod" value="mid" checked style="accent-color:var(--accent);">Mid Sleep Capture · 1:30–3:00am
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="radio" name="monthMethod" value="early" style="accent-color:var(--accent);">Early Sleep Capture · 11:30pm–1:29am
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" data-cancel>CANCEL</button>
+      <button class="modal-btn" data-apply>CALCULATE</button>
+    </div>
+  `;
+
+  overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('[data-apply]').addEventListener('click', () => {
+    const date = overlay.querySelector('#monthDatePicker').value;
+    const method = overlay.querySelector('input[name="monthMethod"]:checked').value;
+    runMonthlyCalc(allReadings, date, method, overlay);
+  });
+}
+
+function runMonthlyCalc(allReadings, date, method, overlay) {
+  try {
+    let filtered, methodLabel;
+
+    if (method === 'mid') {
+      filtered = allReadings.filter(r => {
+        if (readingLocalDate(r) !== date) return false;
+        const { h, m } = readingLocalHM(r);
+        return h * 60 + m >= 90 && h * 60 + m <= 180;
+      });
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window on ${date}`);
+      methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
+    } else {
+      const prevD = new Date(date + 'T12:00:00');
+      prevD.setDate(prevD.getDate() - 1);
+      const prevStr = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}-${String(prevD.getDate()).padStart(2,'0')}`;
+
+      const fromPrev = allReadings.filter(r => {
+        if (readingLocalDate(r) !== prevStr) return false;
+        const { h, m } = readingLocalHM(r);
+        return h === 23 && m >= 30;
+      });
+      const fromTarget = allReadings.filter(r => {
+        if (readingLocalDate(r) !== date) return false;
+        const { h, m } = readingLocalHM(r);
+        return h === 0 || (h === 1 && m <= 29);
+      });
+      filtered = [...fromPrev, ...fromTarget];
+      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 11:30pm–1:29am window for ${date}`);
+      methodLabel = 'Early Sleep Capture · 11:30pm–1:29am';
+    }
+
+    applyCalcResult(filtered, methodLabel, overlay);
+  } catch(e) {
+    showToast(e.message || 'Calculation error');
+  }
+}
+
+// ---------- Chart range toggle ----------
+function setChartRange(range) {
+  chartRange = range;
+  $('btn14d').classList.toggle('active', range === 14);
+  $('btn60d').classList.toggle('active', range === 60);
+  tappedIdx = null;
+  renderChart();
 }
 
 // ---------- Render orchestration ----------
@@ -726,9 +996,19 @@ async function ghRequest(method, body) {
   const token = getGHToken();
   if (!token) return null;
   const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${getGHPath()}`;
-  const opts = { method, headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' } };
+  const opts = {
+    method,
+    mode: 'cors',
+    credentials: 'omit',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json'
+    }
+  };
   if (body) opts.body = JSON.stringify(body);
-  try { return await fetch(url, opts); } catch { return null; }
+  try { return await fetch(url, opts); } catch(e) { console.error('ghRequest:', e); return null; }
 }
 
 async function loadFromGitHub() {
@@ -745,7 +1025,7 @@ async function loadFromGitHub() {
 }
 
 async function saveToGitHub() {
-  if (!getGHToken()) return;
+  if (!getGHToken()) return false;
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(readings, null, 2))));
   const body = { message: 'Update HRV readings', content };
   if (ghFileSha) body.sha = ghFileSha;
@@ -753,6 +1033,12 @@ async function saveToGitHub() {
   if (res && res.ok) {
     const data = await res.json();
     ghFileSha = data.content.sha;
+    showToast('Saved to GitHub ✓');
+    return true;
+  } else {
+    const status = res ? `HTTP ${res.status}` : 'network error';
+    showToast(`GitHub save failed (${status}) — tap ⟳ to check token`);
+    return false;
   }
 }
 
@@ -774,10 +1060,35 @@ function showSyncModal() {
     <input id="patInput" type="password" placeholder="ghp_..." value="${currentToken}" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-mono);font-size:13px;width:100%;outline:none;box-sizing:border-box;">
     <div class="modal-actions">
       <button class="modal-btn cancel" data-cancel>CANCEL</button>
+      <button class="modal-btn cancel" data-test>TEST</button>
       <button class="modal-btn" data-save>SAVE & SYNC</button>
     </div>
+    <div id="testResult" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:4px;text-align:center;min-height:16px;"></div>
   `);
   overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('[data-test]').addEventListener('click', async () => {
+    const token = overlay.querySelector('#patInput').value.trim();
+    const resultEl = overlay.querySelector('#testResult');
+    if (!token) { resultEl.textContent = 'Enter a token first'; return; }
+    resultEl.textContent = 'Testing...';
+    try {
+      const res = await fetch('https://api.github.com/user', {
+        mode: 'cors', credentials: 'omit',
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
+      });
+      if (res.ok) {
+        const u = await res.json();
+        resultEl.style.color = 'var(--green)';
+        resultEl.textContent = `✓ Token valid — logged in as ${u.login}`;
+      } else {
+        resultEl.style.color = 'var(--red)';
+        resultEl.textContent = `✗ Token rejected (HTTP ${res.status})`;
+      }
+    } catch(e) {
+      resultEl.style.color = 'var(--red)';
+      resultEl.textContent = `✗ Network error — ${e.message}`;
+    }
+  });
   overlay.querySelector('[data-save]').addEventListener('click', async () => {
     const user  = overlay.querySelector('#userInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     const token = overlay.querySelector('#patInput').value.trim();
@@ -818,12 +1129,38 @@ function showInfoModal() {
   overlay.querySelector('[data-close]').addEventListener('click', () => overlay.remove());
 }
 
+// ---------- Pull to refresh ----------
+(function() {
+  let startY = 0, pulling = false;
+  const indicator = () => document.getElementById('pullIndicator');
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) { startY = e.touches[0].clientY; pulling = true; }
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 50) indicator().classList.add('visible');
+    else indicator().classList.remove('visible');
+  }, { passive: true });
+  document.addEventListener('touchend', async e => {
+    if (!pulling) return;
+    pulling = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    indicator().classList.remove('visible');
+    if (dy > 50 && window.scrollY === 0) {
+      if (getGHToken()) {
+        const loaded = await loadFromGitHub();
+        if (loaded) render();
+      }
+    }
+  }, { passive: true });
+})();
+
 // ---------- Init ----------
 async function init() {
   drawYAxis();
   $('addBtn').addEventListener('click', addReading);
   $('calcBtn').addEventListener('click', showCalcModal);
-  $('calcUseBtn').addEventListener('click', () => { $('calcResult').classList.remove('show'); });
   $('exportBtn').addEventListener('click', exportData);
   $('importBtn').addEventListener('click', showImportModal);
   $('syncBtn').addEventListener('click', showSyncModal);
@@ -836,7 +1173,10 @@ async function init() {
   updateSyncStatus();
   if (getGHToken()) {
     const loaded = await loadFromGitHub();
-    if (!loaded) await saveToGitHub();
+    if (!loaded) {
+      const saved = await saveToGitHub();
+      if (!saved) showToast('Could not reach GitHub — check your token');
+    }
   } else {
     load();
   }
