@@ -19,13 +19,8 @@
 
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--bg); color:var(--text); font-family:var(--font-body); min-height:100vh; padding:24px 20px 60px; overscroll-behavior-y:contain; }
-  .pull-indicator { text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--accent); letter-spacing:2px; height:0; overflow:hidden; opacity:0; transition:height 0.3s ease, opacity 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px; }
-  .pull-indicator.visible { height:36px; opacity:1; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  #refreshOverlay { position:fixed; inset:0; background:rgba(10,18,24,0.75); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; opacity:0; pointer-events:none; transition:opacity 0.3s ease; }
-  #refreshOverlay.show { opacity:1; pointer-events:all; }
-  #refreshOverlay .big-spinner { width:48px; height:48px; border:3px solid rgba(0,210,211,0.25); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
-  #refreshOverlay .refresh-label { font-family:var(--font-mono); font-size:11px; color:var(--accent); letter-spacing:3px; }
+  .pull-indicator { text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--accent); letter-spacing:2px; height:0; overflow:hidden; opacity:0; transition:height 0.1s, opacity 0.1s; }
+  .pull-indicator.visible { height:28px; opacity:1; line-height:28px; }
 
   /* Header */
   .header-top { text-align:center; margin-bottom:24px; position:relative; }
@@ -136,7 +131,6 @@
 <body>
 
 <div class="pull-indicator" id="pullIndicator">↓ RELEASE TO REFRESH</div>
-<div id="refreshOverlay"><div class="big-spinner"></div><div class="refresh-label">REFRESHING</div></div>
 
 <div class="header-top">
   <h1>HRV Tracker</h1>
@@ -1036,14 +1030,10 @@ function showInfoModal() {
     const dy = e.changedTouches[0].clientY - startY;
     indicator().classList.remove('visible');
     if (dy > 50 && window.scrollY === 0) {
-      const overlay = document.getElementById('refreshOverlay');
-      overlay.classList.add('show');
-      const [loaded] = await Promise.all([
-        getGHToken() ? loadFromGitHub() : Promise.resolve(false),
-        new Promise(r => setTimeout(r, 1500))
-      ]);
-      overlay.classList.remove('show');
-      if (loaded) render();
+      if (getGHToken()) {
+        const loaded = await loadFromGitHub();
+        if (loaded) render();
+      }
     }
   }, { passive: true });
 })();
