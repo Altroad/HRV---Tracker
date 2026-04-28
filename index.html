@@ -136,6 +136,7 @@
 <div class="header-top">
   <h1>HRV Tracker</h1>
   <div class="baseline-badge" id="baselineBadge">Baseline: 88ms</div>
+  <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:4px;" id="appVersion">v2026-04-28</div>
   <button class="sync-btn" id="syncBtn" title="GitHub sync">⟳</button>
   <button class="info-btn" id="infoBtn">?</button>
 </div>
@@ -824,15 +825,23 @@ function extractHRVReadings(json) {
   return metric.data;
 }
 
+function parseTimestamp(r) {
+  const s = (r.start || r.date).trim();
+  // Normalize to ISO 8601 with colon in offset (+0800 → +08:00) for Safari compatibility
+  return new Date(
+    s.replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T')
+     .replace(/ ([+-])(\d{2})(\d{2})$/, '$1$2:$3')
+     .replace(/([+-])(\d{2})(\d{2})$/, '$1$2:$3')
+  );
+}
+
 function readingLocalHM(r) {
-  const raw = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1');
-  const d = new Date(raw);
+  const d = parseTimestamp(r);
   return { h: d.getHours(), m: d.getMinutes(), ts: d.getTime() };
 }
 
 function readingLocalDate(r) {
-  const raw = (r.start || r.date).replace(' ', 'T').replace(/ ([+-]\d{4})$/, '$1');
-  const d = new Date(raw);
+  const d = parseTimestamp(r);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
