@@ -886,17 +886,27 @@ function runCalc(text, overlay) {
 function applyCalcResult(filtered, methodLabel, overlay) {
   filtered.sort((a, b) => readingLocalHM(a).ts - readingLocalHM(b).ts);
   const values = filtered.map(r => r.qty).sort((a, b) => a - b);
-  const trimmed = values.slice(1, -1);
-  const avg = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
-  const min = values[0], max = values[values.length - 1];
+  let avg, statLabel, min, max;
+  if (values.length >= 3) {
+    const trimmed = values.slice(1, -1);
+    avg = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
+    min = values[0]; max = values[values.length - 1];
+    statLabel = `trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
+  } else if (values.length === 2) {
+    avg = Math.round((values[0] + values[1]) / 2);
+    statLabel = `average · 2 readings`;
+  } else {
+    avg = Math.round(values[0]);
+    statLabel = `single reading`;
+  }
   overlay.remove();
   const panel = $('calcResult');
   $('calcValue').textContent = avg;
   $('calcValue').style.color = colorForHRV(avg);
-  $('calcLabel').textContent = `${methodLabel} · trimmed mean · ${filtered.length} readings · dropped ${Math.round(min)} + ${Math.round(max)}`;
+  $('calcLabel').textContent = `${methodLabel} · ${statLabel}`;
   const chips = filtered.map(r => {
     const qty = Math.round(r.qty);
-    const isDropped = r.qty === values[0] || r.qty === values[values.length - 1];
+    const isDropped = values.length >= 3 && (r.qty === values[0] || r.qty === values[values.length - 1]);
     const cls = isDropped ? 'calc-chip dropped' : 'calc-chip used';
     const { h, m } = readingLocalHM(r);
     const t = `${h}:${String(m).padStart(2,'0')}`;
@@ -937,14 +947,7 @@ function viableDates(allReadings) {
 function showMonthlyPicker(allReadings, dates, overlay) {
   lastMonthlyData = { allReadings, dates };
   const modal = overlay.querySelector('.modal');
-  const viable = viableDates(allReadings);
-  const filteredDates = dates.filter(d => viable.has(d));
-  if (filteredDates.length === 0) {
-    overlay.remove();
-    showToast('No dates with enough readings (need ≥ 3 in a capture window)');
-    return;
-  }
-  const sortedDates = [...filteredDates].sort((a, b) => b.localeCompare(a));
+  const sortedDates = [...dates].sort((a, b) => b.localeCompare(a));
   const dateOptions = sortedDates.map(d => {
     const dt = new Date(d + 'T12:00:00');
     const label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -987,7 +990,7 @@ function runMonthlyCalc(allReadings, date, method, overlay) {
         const { h, m } = readingLocalHM(r);
         return h * 60 + m >= 90 && h * 60 + m <= 180;
       });
-      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 1:30–3am window on ${date}`);
+      if (filtered.length === 0) throw new Error(`No readings in 1:30–3am window on ${date}`);
       methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
     } else {
       const prevD = new Date(date + 'T12:00:00');
@@ -1005,7 +1008,7 @@ function runMonthlyCalc(allReadings, date, method, overlay) {
         return h === 0 || (h === 1 && m <= 29);
       });
       filtered = [...fromPrev, ...fromTarget];
-      if (filtered.length < 3) throw new Error(`Only ${filtered.length} reading(s) in 11:30pm–1:29am window for ${date}`);
+      if (filtered.length === 0) throw new Error(`No readings in 11:30pm–1:29am window for ${date}`);
       methodLabel = 'Early Sleep Capture · 11:30pm–1:29am';
     }
 
