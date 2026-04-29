@@ -836,13 +836,12 @@ function parseTimestamp(r) {
 }
 
 function readingLocalHM(r) {
-  const d = parseTimestamp(r);
-  return { h: d.getHours(), m: d.getMinutes(), ts: d.getTime() };
+  const s = (r.start || r.date).trim();
+  return { h: parseInt(s.slice(11, 13), 10), m: parseInt(s.slice(14, 16), 10), ts: parseTimestamp(r).getTime() || 0 };
 }
 
 function readingLocalDate(r) {
-  const d = parseTimestamp(r);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return (r.start || r.date).trim().slice(0, 10);
 }
 
 function runCalc(text, overlay) {
