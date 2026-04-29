@@ -447,7 +447,7 @@ function renderChart() {
   if (!allSorted.length) return;
 
   const allValues = allSorted.map(r => r.hrv);
-  const allRolling = rollingAverage(allValues);
+  const allRolling = rollingAverage(allValues, chartRange <= 14 ? 7 : 14);
 
   // 14D: show all data on scrollable canvas; 60D: slice to last chartRange
   const sorted = chartRange <= 14 ? allSorted : allSorted.slice(-chartRange);
