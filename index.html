@@ -303,7 +303,7 @@ function getAveragedByDate() {
   for (const r of readings) (groups[r.date] ||= []).push(r.hrv);
   return Object.entries(groups).map(([date, hrvs]) => ({
     date,
-    hrv: parseFloat((hrvs.reduce((a,b) => a+b, 0) / hrvs.length).toFixed(2)),
+    hrv: Math.round(hrvs.reduce((a,b) => a+b, 0) / hrvs.length),
     count: hrvs.length
   }));
 }
@@ -389,7 +389,7 @@ function buildPointsPlugin(values, pr, canvas) {
       // Draw tooltip for tapped point
       if (tappedIdx === null || !meta.data[tappedIdx]) return;
       const pt = meta.data[tappedIdx];
-      const label = `${values[tappedIdx]}ms`;
+      const label = `${Math.round(values[tappedIdx])}ms`;
       ctx.save();
       ctx.font = 'bold 42px "Bebas Neue", sans-serif';
       const bw = ctx.measureText(label).width + 28;
@@ -590,7 +590,7 @@ function renderHistory() {
       const color = colorForHRV(r.hrv);
       html += `<div class="history-row">
         <div class="history-date">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
-        <div class="history-hrv" style="color:${color}">${r.hrv}</div>
+        <div class="history-hrv" style="color:${color}">${Math.round(r.hrv)}</div>
         <div class="history-bar"><div class="history-bar-fill" style="width:${bw}%;background:${color}"></div></div>
         <div class="history-delta" style="color:${dColor}">${dStr}</div>
         <button class="delete-btn" data-id="${r.id}">✕</button>
