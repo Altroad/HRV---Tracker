@@ -914,10 +914,37 @@ function openMonthlyPickerAgain() {
   showMonthlyPicker(lastMonthlyData.allReadings, lastMonthlyData.dates, overlay);
 }
 
+function viableDates(allReadings) {
+  const byDate = {};
+  for (const r of allReadings) {
+    const d = readingLocalDate(r);
+    (byDate[d] = byDate[d] || []).push(r);
+  }
+  const viable = new Set();
+  for (const [date, readings] of Object.entries(byDate)) {
+    const mid = readings.filter(r => { const {h,m} = readingLocalHM(r); return h*60+m >= 90 && h*60+m <= 180; });
+    if (mid.length >= 3) { viable.add(date); continue; }
+    const prevDate = new Date(date + 'T12:00:00');
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}-${String(prevDate.getDate()).padStart(2,'0')}`;
+    const fromPrev = (byDate[prevStr] || []).filter(r => { const {h,m} = readingLocalHM(r); return h === 23 && m >= 30; });
+    const fromThis = readings.filter(r => { const {h,m} = readingLocalHM(r); return h === 0 || (h === 1 && m <= 29); });
+    if (fromPrev.length + fromThis.length >= 3) viable.add(date);
+  }
+  return viable;
+}
+
 function showMonthlyPicker(allReadings, dates, overlay) {
   lastMonthlyData = { allReadings, dates };
   const modal = overlay.querySelector('.modal');
-  const sortedDates = [...dates].sort((a, b) => b.localeCompare(a));
+  const viable = viableDates(allReadings);
+  const filteredDates = dates.filter(d => viable.has(d));
+  if (filteredDates.length === 0) {
+    overlay.remove();
+    showToast('No dates with enough readings (need ≥ 3 in a capture window)');
+    return;
+  }
+  const sortedDates = [...filteredDates].sort((a, b) => b.localeCompare(a));
   const dateOptions = sortedDates.map(d => {
     const dt = new Date(d + 'T12:00:00');
     const label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
