@@ -397,7 +397,8 @@ function buildPointsPlugin(values, pr, canvas) {
       const dpr = window.devicePixelRatio || 1;
       const maxX = canvas.width / dpr - bw - 4;
       const bx = Math.max(4, Math.min(maxX, pt.x - bw / 2));
-      const by = pt.y - pr - 68;
+      const aboveY = pt.y - pr - 68;
+      const by = aboveY < 4 ? pt.y + pr + 14 : aboveY;
       const r = 6;
       ctx.fillStyle = COLORS.surface;
       ctx.strokeStyle = COLORS.accent;
