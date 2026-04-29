@@ -956,14 +956,14 @@ function showMonthlyPicker(allReadings, dates, overlay) {
 
   modal.innerHTML = `
     <div class="modal-title">Import — Choose Date &amp; Stage</div>
-    <div class="modal-desc">Select a date and capture window.</div>
+    <div class="modal-desc">Select a date and one or both capture windows.</div>
     <select id="monthDatePicker" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font-mono);font-size:14px;width:100%;outline:none;box-sizing:border-box;">${dateOptions}</select>
     <div style="display:flex;flex-direction:column;gap:10px;font-family:var(--font-mono);font-size:12px;color:var(--text);padding:2px 0;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="radio" name="monthMethod" value="mid" checked style="accent-color:var(--accent);">Mid Sleep Capture · 1:30–3:00am
+        <input type="checkbox" id="methodMid" checked style="accent-color:var(--accent);width:14px;height:14px;">Mid Sleep Capture · 1:30–3:00am
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="radio" name="monthMethod" value="early" style="accent-color:var(--accent);">Early Sleep Capture · 11:30pm–1:29am
+        <input type="checkbox" id="methodEarly" style="accent-color:var(--accent);width:14px;height:14px;">Early Sleep Capture · 11:30pm–1:29am
       </label>
     </div>
     <div class="modal-actions">
@@ -975,42 +975,48 @@ function showMonthlyPicker(allReadings, dates, overlay) {
   overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
   overlay.querySelector('[data-apply]').addEventListener('click', () => {
     const date = overlay.querySelector('#monthDatePicker').value;
-    const method = overlay.querySelector('input[name="monthMethod"]:checked').value;
-    runMonthlyCalc(allReadings, date, method, overlay);
+    const useMid = overlay.querySelector('#methodMid').checked;
+    const useEarly = overlay.querySelector('#methodEarly').checked;
+    if (!useMid && !useEarly) { showToast('Select at least one capture window'); return; }
+    runMonthlyCalc(allReadings, date, useMid, useEarly, overlay);
   });
 }
 
-function runMonthlyCalc(allReadings, date, method, overlay) {
+function runMonthlyCalc(allReadings, date, useMid, useEarly, overlay) {
   try {
-    let filtered, methodLabel;
+    const prevD = new Date(date + 'T12:00:00');
+    prevD.setDate(prevD.getDate() - 1);
+    const prevStr = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}-${String(prevD.getDate()).padStart(2,'0')}`;
 
-    if (method === 'mid') {
-      filtered = allReadings.filter(r => {
-        if (readingLocalDate(r) !== date) return false;
-        const { h, m } = readingLocalHM(r);
-        return h * 60 + m >= 90 && h * 60 + m <= 180;
-      });
-      if (filtered.length === 0) throw new Error(`No readings in 1:30–3am window on ${date}`);
-      methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
-    } else {
-      const prevD = new Date(date + 'T12:00:00');
-      prevD.setDate(prevD.getDate() - 1);
-      const prevStr = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}-${String(prevD.getDate()).padStart(2,'0')}`;
-
-      const fromPrev = allReadings.filter(r => {
+    const midReadings = allReadings.filter(r => {
+      if (readingLocalDate(r) !== date) return false;
+      const { h, m } = readingLocalHM(r);
+      return h * 60 + m >= 90 && h * 60 + m <= 180;
+    });
+    const earlyReadings = [
+      ...allReadings.filter(r => {
         if (readingLocalDate(r) !== prevStr) return false;
         const { h, m } = readingLocalHM(r);
         return h === 23 && m >= 30;
-      });
-      const fromTarget = allReadings.filter(r => {
+      }),
+      ...allReadings.filter(r => {
         if (readingLocalDate(r) !== date) return false;
         const { h, m } = readingLocalHM(r);
         return h === 0 || (h === 1 && m <= 29);
-      });
-      filtered = [...fromPrev, ...fromTarget];
-      if (filtered.length === 0) throw new Error(`No readings in 11:30pm–1:29am window for ${date}`);
-      methodLabel = 'Early Sleep Capture · 11:30pm–1:29am';
-    }
+      })
+    ];
+
+    const filtered = [
+      ...(useMid ? midReadings : []),
+      ...(useEarly ? earlyReadings : [])
+    ];
+
+    let methodLabel;
+    if (useMid && useEarly)       methodLabel = 'Mid + Early Sleep · 11:30pm–3:00am';
+    else if (useMid)              methodLabel = 'Mid Sleep Capture · 1:30am–3:00am';
+    else                          methodLabel = 'Early Sleep Capture · 11:30pm–1:29am';
+
+    if (filtered.length === 0) throw new Error(`No readings in selected window(s) for ${date}`);
 
     applyCalcResult(filtered, methodLabel, overlay);
   } catch(e) {
