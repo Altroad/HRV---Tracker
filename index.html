@@ -1169,20 +1169,43 @@ function showSyncModal() {
 // ---------- Info modal ----------
 function showInfoModal() {
   const overlay = openModal(`
-    <div class="modal-title">About — HRV Calculation</div>
-    <div class="modal-desc" style="line-height:1.7">
-      Daily HRV scores use a <strong>trimmed mean</strong> from raw Apple Watch overnight readings exported via Health Auto Export.<br><br>
-      <strong>Time window:</strong> 1:30am – 3:00am only — the core deep sleep window where HRV is most stable.<br><br>
-      <strong>Steps:</strong><br>
-      1. Extract readings in the 1:30–3am window<br>
-      2. Sort by value<br>
-      3. Drop the highest and lowest reading<br>
+    <div class="modal-title">About — HRV Tracker</div>
+    <div class="modal-desc" style="line-height:1.8;max-height:65vh;overflow-y:auto;padding-right:4px;">
+
+      <strong style="color:var(--accent);letter-spacing:1px;">IMPORTING DATA</strong><br>
+      Tap <em>Import &amp; Calculate</em> and paste a Health Auto Export JSON (any size — single day, overnight, or full month). The app always shows the date &amp; window picker so you stay in control.<br><br>
+
+      <strong style="color:var(--accent);letter-spacing:1px;">CHOOSING A DATE &amp; WINDOW</strong><br>
+      The picker lists every date found in the pasted export. Select the date you want to score, then choose one or both capture windows:<br><br>
+
+      <strong>Mid Sleep · 1:30am – 3:00am</strong><br>
+      Readings taken during the core deep-sleep window. Most stable HRV signal. Use this for a standard overnight score.<br><br>
+
+      <strong>Early Sleep · 11:30pm – 1:29am</strong><br>
+      Covers the first sleep cycle. Only enabled when the export contains prior-night data (readings from 11:30pm the night before). Use this if your deep sleep falls earlier.<br><br>
+
+      <strong>Both windows selected</strong><br>
+      Pools all readings from 11:30pm – 3:00am and scores the combined set. Useful when you want a broader overnight average.<br><br>
+
+      <strong style="color:var(--accent);letter-spacing:1px;">THE CALCULATION</strong><br>
+      1. Filter readings to the selected window &amp; date<br>
+      2. Sort all values lowest → highest<br>
+      3. Drop the single highest and single lowest reading<br>
       4. Average the remaining values<br>
       5. Round to nearest whole number<br><br>
-      <strong>Why trimmed mean?</strong> Removes artefact readings from movement or signal noise — more robust than a simple average for small samples.<br><br>
-      <strong>Minimum:</strong> At least 3 readings required in the window.
+
+      With only 2 readings the average is used (no trim). With 1 reading it is used directly.<br><br>
+
+      <strong>Why trimmed mean?</strong> Removes artefact spikes from movement or signal noise — more robust than a plain average for small overnight samples.<br><br>
+
+      <strong style="color:var(--accent);letter-spacing:1px;">ANOTHER DATE</strong><br>
+      After a result is shown, <em>Another Date</em> re-opens the picker reusing the same pasted data — no need to paste again. Session-only; nothing is stored.<br><br>
+
+      <strong style="color:var(--accent);letter-spacing:1px;">BASELINE &amp; ZONES</strong><br>
+      The baseline is the 60-day trimmed mean of all stored scores. The four colour zones (low / below / normal / above) scale relative to your personal baseline.
+
     </div>
-    <button class="modal-btn" data-close>CLOSE</button>
+    <button class="modal-btn" style="margin-top:12px;" data-close>CLOSE</button>
   `);
   overlay.querySelector('[data-close]').addEventListener('click', () => overlay.remove());
 }
