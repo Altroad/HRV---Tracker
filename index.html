@@ -139,7 +139,7 @@
 
 <div class="header-top">
   <h1>HRV Tracker</h1>
-
+  <div id="baselineBadge" style="font-family:var(--font-mono);font-size:13px;color:var(--accent);background:var(--surface2);border:1px solid var(--accent);padding:5px 14px;border-radius:6px;display:inline-block;margin-top:6px;letter-spacing:1px;">Baseline: —ms</div>
   <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:4px;" id="appVersion">v2026-04-29.1</div>
   <button class="sync-btn" id="syncBtn" title="GitHub sync">⟳</button>
   <button class="info-btn" id="infoBtn">?</button>
@@ -165,10 +165,9 @@
     <div class="metric-delta" id="avg7dDelta">vs baseline</div>
   </div>
   <div class="metric">
-    <div class="metric-label">Baseline</div>
-    <div class="metric-value" id="baselineValue" style="color:var(--muted)">—</div>
-    <div class="metric-unit">ms</div>
-    <div class="metric-delta" id="baselinePeriod">—</div>
+    <div class="metric-label">Trend</div>
+    <div class="metric-value" id="trendValue" style="color:var(--green)">—</div>
+    <div class="metric-unit" id="trendLabel">7-day</div>
   </div>
 </div>
 
@@ -618,9 +617,8 @@ function updateBaseline() {
     const pool = readings.filter(r => new Date(r.date) >= cutoff);
     const src = pool.length > 0 ? pool : readings;
     BASELINE = Math.round(src.reduce((a, b) => a + b.hrv, 0) / src.length);
-    const label = pool.length > 0 ? '12mo avg' : `${readings.length}d avg`;
-    $('baselineValue').textContent = BASELINE;
-    $('baselinePeriod').textContent = label;
+    const label = pool.length > 0 ? '12mo' : `${readings.length}d`;
+    $('baselineBadge').textContent = `Baseline: ${BASELINE}ms · ${label}`;
   }
   ZONE_HIGH = Math.round(BASELINE * 1.10);
   ZONE_GOOD = Math.round(BASELINE * 0.95);
@@ -682,10 +680,15 @@ function updateMetrics() {
   ael.textContent = (ad >= 0 ? '▲' : '▼') + Math.abs(ad) + 'ms vs baseline';
   ael.style.color = ad >= 0 ? COLORS.green : COLORS.red;
 
-  // Trend (shown in status sub)
+  // Trend
   if (sorted.length >= 3) {
     const l3 = sorted.slice(-3).map(r => r.hrv);
     const diff = l3[2] - l3[0];
+    const tv = $('trendValue');
+    const tl = $('trendLabel');
+    if      (diff > 3)  { tv.textContent = '↑'; tv.style.color = COLORS.green;  tl.textContent = 'rising';  }
+    else if (diff < -3) { tv.textContent = '↓'; tv.style.color = COLORS.red;    tl.textContent = 'falling'; }
+    else                { tv.textContent = '→'; tv.style.color = COLORS.orange; tl.textContent = 'stable';  }
   }
 
   setStatus(latest.hrv);
