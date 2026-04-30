@@ -124,7 +124,7 @@
   .heatmap-col { display:flex; flex-direction:column; gap:3px; }
   .heatmap-month-labels { display:flex; gap:3px; margin-bottom:4px; padding-left:20px; }
   .heatmap-day-labels { display:flex; flex-direction:column; gap:3px; flex-shrink:0; margin-right:4px; }
-  .heatmap-day-label { font-family:var(--font-mono); font-size:8px; color:var(--muted); width:16px; height:11px; line-height:11px; text-align:right; }
+  .heatmap-day-label { font-family:var(--font-mono); font-size:7px; color:var(--muted); width:16px; height:14px; line-height:14px; text-align:right; }
   .heatmap-month-label { font-family:var(--font-mono); font-size:8px; color:var(--muted); white-space:nowrap; }
   .hm-cell { width:14px; height:14px; border-radius:2px; background:var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:6px; color:rgba(255,255,255,0.35); line-height:1; }
 
@@ -1265,7 +1265,7 @@ function renderHeatmap() {
   scrollWrap.appendChild(grid);
 
   // Day labels fixed on left, scroll area to the right
-  const DAY_LABELS = ['M','','W','','F','','S'];
+  const DAY_LABELS = ['M','T','W','T','F','S','S'];
   const dayCol = document.createElement('div');
   dayCol.className = 'heatmap-day-labels';
   // push day labels down to align with grid (label row height = 8px font + 4px margin = ~16px)
