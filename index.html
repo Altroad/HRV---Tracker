@@ -251,7 +251,7 @@ const GH_USER_KEY = 'hrv_github_user';
 
 // ---------- State ----------
 let readings = [];
-let BASELINE = 88;
+let BASELINE = 80;
 let ZONE_HIGH = 97, ZONE_GOOD = 84, ZONE_OK = 70;
 let mainChart = null;
 let currentPtW = 0;
@@ -610,7 +610,7 @@ function renderHistory() {
 
 // ---------- Metrics + Status ----------
 function updateBaseline() {
-  if (!readings.length) { BASELINE = 88; }
+  if (!readings.length) { BASELINE = 80; }
   else {
     const cutoff = new Date();
     cutoff.setFullYear(cutoff.getFullYear() - 1);
