@@ -242,7 +242,7 @@
 const STORAGE_KEY = 'hrv_readings_v2';
 const BACKUP_KEY  = 'hrv_readings_backup';
 const LEGACY_KEYS = ['hrv_readings'];
-const CHART = { minV: 20, maxV: 170, height: 260, range: 14 };
+const CHART = { minV: 20, maxV: 150, height: 260, range: 14 };
 const COLORS = { accent:'#00e5ff', green:'#4caf50', orange:'#ff9800', red:'#f44336', muted:'#4a6070', surface:'#0e1419' };
 const GH_OWNER = 'Altroad';
 const GH_REPO  = 'HRV-Tracker';
@@ -592,7 +592,7 @@ function renderHistory() {
       const delta = deltaMap.get(r.id);
       const dStr = delta === null ? '—' : (delta >= 0 ? `▲${delta}` : `▼${Math.abs(delta)}`);
       const dColor = delta === null ? COLORS.muted : delta >= 0 ? COLORS.green : COLORS.red;
-      const bw = Math.min(100, (r.hrv / 170) * 100);
+      const bw = Math.min(100, (r.hrv / 150) * 100);
       const color = colorForHRV(r.hrv);
       html += `<div class="history-row">
         <div class="history-date">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
