@@ -126,7 +126,7 @@
   .heatmap-day-labels { display:flex; flex-direction:column; gap:3px; flex-shrink:0; margin-right:4px; }
   .heatmap-day-label { font-family:var(--font-mono); font-size:8px; color:var(--muted); width:16px; height:11px; line-height:11px; text-align:right; }
   .heatmap-month-label { font-family:var(--font-mono); font-size:8px; color:var(--muted); white-space:nowrap; }
-  .hm-cell { width:11px; height:11px; border-radius:2px; background:var(--border); flex-shrink:0; }
+  .hm-cell { width:14px; height:14px; border-radius:2px; background:var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:6px; color:rgba(255,255,255,0.35); line-height:1; }
 
   /* Toast */
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:#000; padding:10px 20px; border-radius:8px; font-family:var(--font-mono); font-size:12px; letter-spacing:1px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
@@ -1216,7 +1216,7 @@ function renderHeatmap() {
     return 'rgba(244,67,54,0.8)';
   };
 
-  const CELL = 11, GAP = 3;
+  const CELL = 14, GAP = 3;
 
   // Month label row — one span per week column, inside scroll area
   const labelRow = document.createElement('div');
@@ -1242,6 +1242,7 @@ function renderHeatmap() {
     week.forEach(day => {
       const cell = document.createElement('div');
       cell.className = 'hm-cell';
+      cell.textContent = day.getDate();
       if (day > today) {
         cell.style.opacity = '0.15';
       } else {
@@ -1249,6 +1250,7 @@ function renderHeatmap() {
         const hrv = byDate[iso];
         if (hrv !== undefined) {
           cell.style.background = zoneColor(hrv);
+          cell.style.color = 'rgba(0,0,0,0.45)';
         }
       }
       col.appendChild(cell);
