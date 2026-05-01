@@ -896,6 +896,8 @@ function runSlowWaveCalc(text, overlay) {
       return (mins >= 23 * 60 + 30 || mins < 2 * 60) && inAnyStage(r, coreStages);
     }).sort((a, b) => parseTimestamp(a).getTime() - parseTimestamp(b).getTime());
 
+    const deepSet = new Set(deepReadings);
+
     const needed = 6;
     const selected = [...deepReadings];
     for (const r of coreWindow) {
@@ -922,7 +924,7 @@ function runSlowWaveCalc(text, overlay) {
     const chips = selected.map(r => {
       const qty = Math.round(r.qty);
       const isDropped = droppedSet.has(r);
-      const isDeep = inAnyStage(r, deepStages);
+      const isDeep = deepSet.has(r);
       const stageCls = isDeep ? 'deep' : 'core';
       const droppedCls = isDropped ? ' dropped' : '';
       const { h, m } = readingLocalHM(r);
