@@ -1315,6 +1315,9 @@ function renderHeatmap() {
   const byDate = {};
   getAveragedByDate().forEach(r => { byDate[r.date] = r.hrv; });
 
+  const tagByDate = {};
+  readings.forEach(r => { if (r.tag) tagByDate[r.date] = r.tag; });
+
   const today = new Date();
   today.setHours(12,0,0,0);
 
@@ -1380,7 +1383,12 @@ function renderHeatmap() {
         const iso = day.toISOString().slice(0,10);
         const hrv = byDate[iso];
         if (hrv !== undefined) {
-          cell.style.background = zoneColor(hrv);
+          const zc = zoneColor(hrv);
+          const tag = tagByDate[iso];
+          const tc = tag ? TAG_MAP[tag] : null;
+          cell.style.background = tc
+            ? `linear-gradient(to bottom, ${tc} 50%, ${zc} 50%)`
+            : zc;
           cell.style.color = 'rgba(0,0,0,0.45)';
         }
       }
