@@ -128,6 +128,25 @@
   .heatmap-month-label { font-family:var(--font-mono); font-size:8px; color:var(--muted); white-space:nowrap; }
   .hm-cell { width:14px; height:14px; border-radius:2px; background:var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:6px; color:rgba(255,255,255,0.35); line-height:1; }
 
+  /* Tags */
+  .tag-chip { display:inline-block; font-family:var(--font-mono); font-size:9px; letter-spacing:1px; padding:2px 7px; border-radius:10px; cursor:pointer; flex-shrink:0; border:1px solid transparent; -webkit-user-select:none; user-select:none; }
+  .tag-empty { font-family:var(--font-mono); font-size:10px; color:var(--border); cursor:pointer; padding:2px 4px; flex-shrink:0; }
+  .tag-empty:hover, .tag-empty:active { color:var(--muted); }
+  .note-btn { background:none; border:none; font-size:13px; cursor:pointer; padding:2px 4px; flex-shrink:0; opacity:0.35; }
+  .note-btn.has-note { opacity:1; }
+  .note-row { padding:4px 0 8px 0; display:none; }
+  .note-row.open { display:block; }
+  .note-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--font-body); font-size:13px; padding:8px 10px; resize:none; outline:none; }
+  .note-input:focus { border-color:var(--muted); }
+  .tag-picker { position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px; z-index:1000; box-shadow:0 8px 24px rgba(0,0,0,0.6); display:flex; flex-direction:column; gap:6px; min-width:180px; }
+  .tag-picker-item { font-family:var(--font-mono); font-size:11px; padding:7px 12px; border-radius:6px; cursor:pointer; border:1px solid transparent; -webkit-user-select:none; user-select:none; }
+  .tag-picker-item:active { opacity:0.7; }
+  .tag-picker-clear { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-align:center; padding:4px; cursor:pointer; }
+  .history-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .filter-chip { font-family:var(--font-mono); font-size:9px; letter-spacing:1px; padding:3px 10px; border-radius:10px; cursor:pointer; border:1px solid var(--border); color:var(--muted); background:none; -webkit-user-select:none; user-select:none; }
+  .filter-chip.active { color:#000; }
+  .filter-summary { font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-bottom:10px; padding:8px 10px; background:var(--surface2); border-radius:6px; }
+
   /* Toast */
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:#000; padding:10px 20px; border-radius:8px; font-family:var(--font-mono); font-size:12px; letter-spacing:1px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
   .toast.show { opacity:1; }
@@ -248,6 +267,7 @@
 
 <div class="card">
   <div class="input-label">History</div>
+  <div id="historyFilter" class="history-filter"></div>
   <div id="historyList"><div class="empty-state">No readings yet</div></div>
 </div>
 
@@ -265,6 +285,18 @@ const GH_REPO  = 'HRV-Tracker';
 const GH_PAT_KEY  = 'hrv_github_pat';
 const GH_USER_KEY = 'hrv_github_user';
 
+// ---------- Tags ----------
+const TAGS = [
+  { label:'Sick',              color:'#f44336' },
+  { label:'Rest',              color:'#4caf50' },
+  { label:'Active Recovery',   color:'#2e7d32' },
+  { label:'Zone 2',            color:'#ff9800' },
+  { label:'Efforts',           color:'#f57c00' },
+  { label:'Hard Bunch Ride',   color:'#e64a19' },
+  { label:'Epic Ride',         color:'#bf360c' },
+];
+const TAG_MAP = Object.fromEntries(TAGS.map(t => [t.label, t.color]));
+
 // ---------- State ----------
 let readings = [];
 let BASELINE = 80;
@@ -275,6 +307,7 @@ let tappedIdx = null;
 let nextId = 1;
 let chartRange = 14;
 let lastMonthlyData = null; // session-only, never persisted
+let historyFilter = null;
 
 // ---------- Helpers ----------
 const $ = id => document.getElementById(id);
@@ -547,25 +580,60 @@ function toggleWeek(key) {
   chev.textContent = collapsed ? '▶' : '▼';
 }
 
+function renderFilterBar() {
+  const el = $('historyFilter');
+  if (!readings.length) { el.innerHTML = ''; return; }
+  const usedTags = [...new Set(readings.map(r => r.tag).filter(Boolean))];
+  if (!usedTags.length) { el.innerHTML = ''; return; }
+  let html = `<button class="filter-chip${historyFilter === null ? ' active' : ''}" style="${historyFilter === null ? 'background:var(--muted);border-color:var(--muted);' : ''}" onclick="setHistoryFilter(null)">ALL</button>`;
+  TAGS.filter(t => usedTags.includes(t.label)).forEach(t => {
+    const active = historyFilter === t.label;
+    html += `<button class="filter-chip${active ? ' active' : ''}" style="${active ? `background:${t.color};border-color:${t.color};` : `border-color:${t.color};color:${t.color};`}" onclick="setHistoryFilter('${t.label}')">${t.label.toUpperCase()}</button>`;
+  });
+  el.innerHTML = html;
+}
+
+function setHistoryFilter(tag) {
+  historyFilter = tag;
+  renderFilterBar();
+  renderHistoryList();
+}
+
 function renderHistory() {
+  renderFilterBar();
+  renderHistoryList();
+}
+
+function renderHistoryList() {
   const el = $('historyList');
   if (!readings.length) { el.innerHTML = '<div class="empty-state">No readings yet</div>'; return; }
 
-  const sorted = [...readings].sort((a, b) => {
+  const allSorted = [...readings].sort((a, b) => {
     const d = new Date(b.date) - new Date(a.date);
     return d !== 0 ? d : b.id - a.id;
   });
 
-  // Pre-compute deltas against chronological neighbour
-  const deltaMap = new Map();
-  for (let i = 0; i < sorted.length; i++) {
-    const prev = sorted[i + 1];
-    deltaMap.set(sorted[i].id, prev ? sorted[i].hrv - prev.hrv : null);
+  const filtered = historyFilter ? allSorted.filter(r => r.tag === historyFilter) : allSorted;
+  if (!filtered.length) { el.innerHTML = '<div class="empty-state">No entries with this tag</div>'; return; }
+
+  // Summary when filtering
+  let summaryHtml = '';
+  if (historyFilter) {
+    const avg = Math.round(filtered.reduce((a, r) => a + r.hrv, 0) / filtered.length);
+    const color = colorForHRV(avg);
+    summaryHtml = `<div class="filter-summary">${filtered.length} entries · avg <span style="color:${color};font-family:var(--font-display);font-size:14px;">${avg}ms</span> · ${filtered.at(-1).date} → ${filtered[0].date}</div>`;
   }
 
-  // Group by week
+  // Pre-compute deltas using full sorted list
+  const deltaMap = new Map();
+  for (let i = 0; i < allSorted.length; i++) {
+    const prev = allSorted[i + 1];
+    deltaMap.set(allSorted[i].id, prev ? allSorted[i].hrv - prev.hrv : null);
+  }
+
+  // Group filtered by week
   const weekMap = new Map();
-  for (const r of sorted) {
+  for (const r of filtered) {
     const mon = getWeekMonday(r.date);
     const key = mon.toISOString().split('T')[0];
     if (!weekMap.has(key)) weekMap.set(key, { monday: mon, entries: [] });
@@ -573,7 +641,6 @@ function renderHistory() {
   }
   const weeks = [...weekMap.entries()].sort((a, b) => new Date(b[0]) - new Date(a[0]));
 
-  // Auto-expand enough weeks from the top to always show at least 7 recent readings
   let autoExpandCount = 0;
   const autoExpanded = new Set();
   for (const [key, { entries }] of weeks) {
@@ -584,9 +651,9 @@ function renderHistory() {
 
   const thisYear = new Date().getFullYear();
   let lastMonthKey = null;
-  let html = '';
+  let html = summaryHtml;
 
-  weeks.forEach(([key, { monday, entries }], wi) => {
+  weeks.forEach(([key, { monday, entries }]) => {
     const monthKey = `${monday.getFullYear()}-${monday.getMonth()}`;
     if (monthKey !== lastMonthKey) {
       const yr = monday.getFullYear() !== thisYear ? ` ${monday.getFullYear()}` : '';
@@ -606,22 +673,89 @@ function renderHistory() {
 
     entries.forEach(r => {
       const delta = deltaMap.get(r.id);
-      const dStr = delta === null ? '—' : (delta >= 0 ? `▲${delta}` : `▼${Math.abs(delta)}`);
+      const dStr = delta === null ? '—' : (delta >= 0 ? `▲${Math.abs(delta)}` : `▼${Math.abs(delta)}`);
       const dColor = delta === null ? COLORS.muted : delta >= 0 ? COLORS.green : COLORS.red;
       const bw = Math.min(100, (r.hrv / 150) * 100);
       const color = colorForHRV(r.hrv);
-      html += `<div class="history-row">
+      const tagColor = r.tag ? TAG_MAP[r.tag] : null;
+      const tagHtml = tagColor
+        ? `<span class="tag-chip" style="background:${tagColor}22;border-color:${tagColor};color:${tagColor};" onclick="openTagPicker(event,'${r.id}')">${r.tag.toUpperCase()}</span>`
+        : `<span class="tag-empty" onclick="openTagPicker(event,'${r.id}')">＋</span>`;
+      const noteIcon = r.note
+        ? `<button class="note-btn has-note" onclick="toggleNote('${r.id}')" title="${r.note.replace(/"/g,'&quot;')}">✎</button>`
+        : `<button class="note-btn" onclick="toggleNote('${r.id}')">✎</button>`;
+      const noteRow = `<div class="note-row" id="note-row-${r.id}">
+        <textarea class="note-input" rows="2" placeholder="Add a note…" onblur="saveNote('${r.id}',this.value)">${r.note || ''}</textarea>
+      </div>`;
+      html += `<div class="history-row" id="row-${r.id}">
         <div class="history-date">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
         <div class="history-hrv" style="color:${color}">${Math.round(r.hrv)}</div>
         <div class="history-bar"><div class="history-bar-fill" style="width:${bw}%;background:${color}"></div></div>
         <div class="history-delta" style="color:${dColor}">${dStr}</div>
+        ${tagHtml}${noteIcon}
         <button class="delete-btn" data-id="${r.id}">✕</button>
-      </div>`;
+      </div>${noteRow}`;
     });
     html += '</div>';
   });
 
   el.innerHTML = html;
+}
+
+// ---------- Tag Picker ----------
+let tagPickerEl = null;
+function openTagPicker(e, id) {
+  e.stopPropagation();
+  closeTagPicker();
+  const picker = document.createElement('div');
+  picker.className = 'tag-picker';
+  TAGS.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'tag-picker-item';
+    item.textContent = t.label;
+    item.style.cssText = `background:${t.color}22;border-color:${t.color};color:${t.color};`;
+    item.addEventListener('click', ev => { ev.stopPropagation(); applyTag(id, t.label); closeTagPicker(); });
+    picker.appendChild(item);
+  });
+  const clear = document.createElement('div');
+  clear.className = 'tag-picker-clear';
+  clear.textContent = 'Clear tag';
+  clear.addEventListener('click', ev => { ev.stopPropagation(); applyTag(id, null); closeTagPicker(); });
+  picker.appendChild(clear);
+  document.body.appendChild(picker);
+  tagPickerEl = picker;
+  const r = e.target.getBoundingClientRect();
+  let top = r.bottom + 6;
+  let left = r.left;
+  if (top + 280 > window.innerHeight) top = r.top - 280;
+  if (left + 190 > window.innerWidth) left = window.innerWidth - 196;
+  picker.style.top = top + 'px';
+  picker.style.left = Math.max(4, left) + 'px';
+  setTimeout(() => document.addEventListener('click', closeTagPicker, { once: true }), 0);
+}
+function closeTagPicker() { tagPickerEl?.remove(); tagPickerEl = null; }
+
+function applyTag(id, tag) {
+  const r = readings.find(r => String(r.id) === String(id));
+  if (!r) return;
+  r.tag = tag || undefined;
+  save();
+  renderHistory();
+}
+
+function toggleNote(id) {
+  const row = $(`note-row-${id}`);
+  if (!row) return;
+  const open = row.classList.toggle('open');
+  if (open) row.querySelector('textarea').focus();
+}
+
+function saveNote(id, value) {
+  const r = readings.find(r => String(r.id) === String(id));
+  if (!r) return;
+  r.note = value.trim() || undefined;
+  save();
+  renderHistory();
 }
 
 // ---------- Metrics + Status ----------
