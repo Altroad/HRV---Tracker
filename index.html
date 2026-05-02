@@ -86,11 +86,12 @@
   .backup-row { display:flex; gap:8px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
 
   /* History */
-  .history-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:12px; }
+  .history-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
   .history-row:last-child { border-bottom:none; }
-  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); flex:1; }
-  .history-hrv { font-family:var(--font-display); font-size:24px; letter-spacing:1px; min-width:44px; text-align:right; }
-  .history-delta { font-size:11px; font-family:var(--font-mono); width:40px; text-align:right; flex-shrink:0; }
+  .history-date { font-size:11px; color:var(--muted); font-family:var(--font-mono); flex:1; display:flex; flex-direction:column; gap:3px; }
+  .history-date-line { white-space:nowrap; }
+  .history-hrv { font-family:var(--font-display); font-size:20px; letter-spacing:1px; min-width:38px; text-align:right; flex-shrink:0; }
+  .history-delta { font-size:11px; font-family:var(--font-mono); width:36px; text-align:right; flex-shrink:0; }
   .delete-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px; opacity:0.5; }
   .delete-btn.confirming { color:var(--red); opacity:1; font-size:10px; font-family:monospace; letter-spacing:1px; border:1px solid rgba(244,67,54,0.4); border-radius:4px; padding:3px 7px; }
   .empty-state { text-align:center; padding:30px; color:var(--muted); font-size:13px; font-family:var(--font-mono); }
@@ -676,7 +677,7 @@ function renderHistoryList() {
       const color = colorForHRV(r.hrv);
       const tagColor = r.tag ? TAG_MAP[r.tag] : null;
       const tagHtml = tagColor
-        ? `<span class="tag-chip" style="background:${tagColor}22;border-color:${tagColor};color:${tagColor};" onclick="openTagPicker(event,'${r.id}')">${r.tag.toUpperCase()}</span>`
+        ? `<span class="tag-chip" style="background:${tagColor}22;border-color:${tagColor};color:${tagColor};align-self:flex-start;" onclick="openTagPicker(event,'${r.id}')">${r.tag.toUpperCase()}</span>`
         : `<span class="tag-empty" onclick="openTagPicker(event,'${r.id}')">＋</span>`;
       const noteIcon = r.note
         ? `<button class="note-btn has-note" onclick="toggleNote('${r.id}')" title="${r.note.replace(/"/g,'&quot;')}">✎</button>`
@@ -685,10 +686,13 @@ function renderHistoryList() {
         <textarea class="note-input" rows="2" placeholder="Add a note…" onblur="saveNote('${r.id}',this.value)">${r.note || ''}</textarea>
       </div>`;
       html += `<div class="history-row" id="row-${r.id}">
-        <div class="history-date">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</div>
+        <div class="history-date">
+          <span class="history-date-line">${DAY_NAMES[new Date(r.date+'T12:00:00').getDay()]} ${fmtDate(new Date(r.date))}</span>
+          ${tagHtml}
+        </div>
         <div class="history-hrv" style="color:${color}">${Math.round(r.hrv)}</div>
         <div class="history-delta" style="color:${dColor}">${dStr}</div>
-        ${tagHtml}${noteIcon}
+        ${noteIcon}
         <button class="delete-btn" data-id="${r.id}">✕</button>
       </div>${noteRow}`;
     });
